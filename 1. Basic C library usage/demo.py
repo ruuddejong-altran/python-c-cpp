@@ -1,6 +1,6 @@
 import ctypes
 
-greeting = ctypes.cdll.LoadLibrary('cmake-build-debug/greeting')
+greeting = ctypes.cdll.LoadLibrary('cmake-build-release/greeting')
 
 if __name__ == '__main__':
     message = 'Greetings from Python'

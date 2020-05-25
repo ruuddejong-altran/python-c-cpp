@@ -8,10 +8,18 @@
 
 #include "greeting.h"
 
+int gDebug;
+
+#if DEBUG
+gDebug = 1;
+#else
+gDebug = 0;
+#endif
+
 void greeting(void (*message_printer)(char*), char* message)
 {
-    size_t message_size = strlen(message) + 20;  // Room for extra text
+    size_t message_size = strlen(message) + 40;  // Room for extra text
     char* message_to_send = (char*)malloc(message_size * sizeof(char));
-    sprintf(message_to_send, "Saying \"%s\" from C", message);
+    sprintf(message_to_send, "Saying \"%s\" from C (%s build)", message, (gDebug ? "Debug" : "Release"));
     message_printer(message_to_send);
 }

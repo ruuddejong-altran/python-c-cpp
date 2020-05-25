@@ -12,7 +12,7 @@ that demonstrate the usage of the scenario.
 
 A `greeting` library that contains a function that prints a message.
 
-## 2. Python callback from C library
+## 2. C library with callback
 
 Similar to the previous example, but in this case the printing is done
 via a callback function.
