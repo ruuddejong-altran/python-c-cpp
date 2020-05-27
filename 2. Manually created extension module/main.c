@@ -20,7 +20,7 @@ int main()
     printf("After spamlib.swap(), x = %d, y = %d\n", x, y);
 
     result = do_operation(x, y, &subtract);
-    printf("do_operation(%d, %d, &subtract) gives %d", x, y, result);
+    printf("do_operation(%d, %d, &subtract) gives %d\n", x, y, result);
 
     return 0;
 }
