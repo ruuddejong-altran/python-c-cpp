@@ -8,11 +8,13 @@ and has both a C or C++ executable (called `main`)
 and a Python script (called `demo.py`)
 that demonstrate the usage of the scenario.
 
-## 1. Basic C library used in Python
+## 1. Basic C library usage
 
-A `greeting` library that contains a function that prints a message.
+This example shows how a C library can be used from within Python,
+without any additional tools or coding in C.
 
-## 2. C library with callback
+## 2. Manually created extension module
 
-Similar to the previous example, but in this case the printing is done
-via a callback function.
+This example shows how a C extension module can be created,
+so that it can simple be imported and used from within Python.
+
