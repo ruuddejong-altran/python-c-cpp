@@ -1,6 +1,12 @@
 import ctypes
+import platform
 
-spam = ctypes.cdll.LoadLibrary('./spamlib')
+if platform.system() == 'Windows':
+    libpath = './spamlib'
+else:
+    libpath = './libspamlib.so'
+
+spam = ctypes.cdll.LoadLibrary(libpath)
 
 # Signature of spam.add
 spam.add.argtypes = [ctypes.c_int, ctypes.c_int]
