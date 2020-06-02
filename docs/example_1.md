@@ -77,9 +77,7 @@ Now that we know that the function `add` is indeed present in the library,
 we can of course see if we can use it:
 
 ```
->>> x = 3
->>> y = 5
->>> spam.add(x, y)
+>>> spam.add(3, 5)
 8
 >>>
 ```
@@ -171,6 +169,8 @@ After calling `swap` with pointers to these objects,
 we can assign their Python values back to the original Python variables.
 
 ```
+>>> x = 3
+>>> y = 5
 >>> _x = ctypes.c_int(x)
 >>> _y = ctypes.c_int(y)
 >>> spam.swap(ctypes.pointer(_x), ctypes.pointer(_y))
