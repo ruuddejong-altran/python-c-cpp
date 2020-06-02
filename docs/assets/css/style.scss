@@ -18,3 +18,14 @@ footer {
 section {
   width:calc(100% - 400px);
 }
+
+@media print, screen and (max-width: 960px) {
+
+  div.wrapper {
+    width:auto;
+  }
+
+  header, section, footer {
+    width:auto;
+  }
+}
