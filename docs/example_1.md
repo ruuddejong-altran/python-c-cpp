@@ -200,9 +200,9 @@ for a call to the C-library.
 >>> spam.do_operation.restype = ctypes.c_int
 ```
 
-To use the `do_operator` function, we need a Python function
+To use the `do_operator` function, we first need to define a Python function
 that can act as callback function.
-We need to define that first.
+We define a simple `subtract` function, as shown below.
 The `print` function provides evidence that we are indeed calling the Python function
 from the C library.
 
