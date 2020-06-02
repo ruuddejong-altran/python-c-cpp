@@ -1,6 +1,6 @@
 ---
 title: Introduction
-layout: home
+layout: default
 ---
 
 These pages contain explanatory text for the code examples
