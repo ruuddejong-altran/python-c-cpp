@@ -4,9 +4,17 @@
 @import "jekyll-theme-minimal";
 
 header {
-  max-width:270px;
+  max-width:400px;
+}
+
+footer {
+  max-width:400px;
 }
 
 .wrapper {
   width:100%;
+}
+
+section {
+  width:auto;
 }
