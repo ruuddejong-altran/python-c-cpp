@@ -61,7 +61,7 @@ int do_operation(int a, int b, int (*operator)(int a, int b))
 }
 ```
 
-And to illustrate this works in C, a file `main.c` exercises the functions
+And to illustrate that this works in C, file `main.c` exercises the functions
 in this library, and reports the results:
 
 ```c

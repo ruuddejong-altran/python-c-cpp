@@ -74,7 +74,7 @@ the real C function from the library.
 Instead it is a (thin) wrapper around this library function.
 This wrapper function, amongst other things, converts the Python integer
 objects `3` and `5` in the function call to their C counterparts,
-and converts the C long result back into a Python integer object
+and converts the C `int` result back into a Python integer object
 that is returned to the caller.
 `ctypes` converts Python `int`s, `byte` objects and strings automatically,
 and expects by default an integer result value from the C function.
@@ -98,8 +98,6 @@ Traceback (most recent call last):
 ctypes.ArgumentError: argument 1: <class 'TypeError'>: Don't know how to convert parameter 1
 >>> spam.add(1, 2, 3)
 3
->>> spam.add(1)
-2
 >>> spam.add(1)
 2
 >>> spam.add()
