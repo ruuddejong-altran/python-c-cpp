@@ -21,3 +21,6 @@ pyvenv.cfg
 Scripts
 venv
 cmake-build-*
+
+Release
+Debug
