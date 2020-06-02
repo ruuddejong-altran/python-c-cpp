@@ -4,7 +4,7 @@ layout: default
 ---
 
 These pages contain explanatory text for the code examples
-in the [python-c-cpp GitHub repository]({{site.github_url}}).
+in the [python-c-cpp GitHub repository](https://github.com/ruuddejong-altran/python-c-cpp).
 
 The examples have been tested on:
 
