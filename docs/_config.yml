@@ -23,7 +23,7 @@ email: ruud.dejong@altran.com
 description: >- # this means to ignore newlines until "baseurl:"
   Using C / C++ code from Python, and vice versa.
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "ruuddejong-altran.github.io/python-c-cpp" # the base hostname & protocol for your site, e.g. http://example.com
+url: "https://ruuddejong-altran.github.io/python-c-cpp" # the base hostname & protocol for your site, e.g. http://example.com
 # twitter_username: jekyllrb
 github_username:  ruuddejong-altran
 github_url: https://github.com/ruuddejong-altran/python-c-cpp
