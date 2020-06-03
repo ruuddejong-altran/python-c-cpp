@@ -101,6 +101,8 @@ To execute the `demo.py` file, `cd` to the proper build directory
 (with `spamlib.dll` or `libspamlib.so`),
 and execute `python3 demo.py`.
 
-* [Example 1 - Using ctypes](./example_1.md). This shows how the
-  `ctypes` module can be used to access the library.
+ * [Example 1 - Using ctypes](./example_1.md). This shows a pure Python solution
+   for accessing a C library.
  
+ * [Example 2 - Manually created extension module](./example_2.md). This shows
+   how to code an extension module in C, so that the result can be used directly in Python

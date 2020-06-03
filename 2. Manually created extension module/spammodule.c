@@ -66,9 +66,17 @@ static PyObject *py_callback_func = NULL;
  * This is the function that is actually offered to the
  * do_operation function in spamlib.
  */
-static int callback_wrapper_func(int x, int y)
+static int operator_wrapper_func(int x, int y)
 {
     int retval = 0;
+
+    /*
+     * Ensure that the callback function stays alive during the call to do_operation.
+     * This is not guaranteed, because the callback is executed in Python,
+     * and in principle the callback function could be deleted during that call.
+     * Incrementing the refcount ensures that the reference will remain valid.
+     */
+    Py_INCREF(py_callback_func);
 
     /* Call the Python callback function. */
     PyObject *result = PyObject_CallFunction(py_callback_func, "ii", x, y);
@@ -76,7 +84,9 @@ static int callback_wrapper_func(int x, int y)
     {
         retval = PyLong_AsLong(result);
     }
+
     /* Prevent memory leaks! */
+    Py_DECREF(py_callback_func);
     Py_XDECREF(result);
     return retval;
 }
@@ -99,20 +109,7 @@ static PyObject * spam_do_operation(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    /*
-     * Ensure that the callback function stays alive during
-     * the call to do_operation.
-     * This is not guaranteed, because the callback is
-     * executed in Python, and in principle the callback
-     * function could be deleted during that call.
-     * Incrementing the refcount ensures that the reference will
-     * remain valid.
-     */
-    Py_INCREF(py_callback_func);
-    int result = do_operation(x, y, &callback_wrapper_func);
-    /* Prevent memory leaks! */
-    Py_DECREF(py_callback_func);
-
+    int result = do_operation(x, y, &operator_wrapper_func);
     return Py_BuildValue("i", result);
 }
 
