@@ -5,7 +5,7 @@ title: Example 1
 
 # Example 1 - Using ctypes
 
-The most basic way to use a C or C++ library
+The most basic way to use a C library
 is with the `ctypes` module from
 Python's standard library.
 It is convenient to `cd` first to the directory
@@ -71,6 +71,19 @@ is to try to access it.
 >>>
 ```
 
+The `spam.add` function is *not*
+the real C function from the library.
+Instead it is a (thin) wrapper around this library function.
+This wrapper function, amongst other things, converts the Python integer
+objects in the function call to their C counterparts,
+and converts the C `int` result back into a Python integer object
+that is returned to the caller.
+
+The creation of a wrapper function takes time, and is therefore
+only done when needed.
+That is the reason that the symbols do not initially appear
+in the contents of `spam`.
+
 ## spam.add
 
 Now that we know that the function `add` is indeed present in the library,
@@ -82,22 +95,10 @@ we can of course see if we can use it:
 >>>
 ```
 
-The `spam.add` function is *not*
-the real C function from the library.
-Instead it is a (thin) wrapper around this library function.
-This wrapper function, amongst other things, converts the Python integer
-objects `3` and `5` in the function call to their C counterparts,
-and converts the C `int` result back into a Python integer object
-that is returned to the caller.
 `ctypes` converts Python `int`s, `byte` objects and strings automatically,
 and expects by default an integer result value from the C function.
-That is why the `add` function could be called with `spam.add(3, 5)`,
+That is why the `add` function can be called with `spam.add(3,&nbsp;5)`,
 and why the result is represented as a Python integer.
-
-The creation of a wrapper function takes time, and is therefore
-only done when needed.
-That is the reason that the symbols do not initially appear
-in the contents of `spam`.
 
 Note that there is very little checking done on the types and number
 of the arguments:
@@ -157,16 +158,12 @@ First we define the function prototype in Python:
 >>>
 ```
 
-As an aside: just referencing the function (`spam.swap`) make `ctypes` create the
-wrapper function .
-The `.argtype` and `.restype` attributes therefore automatically
-refer to the Python wrapper function.
-
 `ctypes` has no possibility to generate a pointer to a Python object.
 To actually use the `swap` function we must therefore first create
 `ctypes.c_int` objects from the original Python `int` objects.
 After calling `swap` with pointers to these objects,
-we can assign their Python values back to the original Python variables.
+we can assign their Python values back to the original Python variables,
+thus completing the swap operation.
 
 ```
 >>> x = 3
@@ -223,4 +220,27 @@ Python subtract function called with x=5, y=3
 2
 >>>
 ```
+
+## Discussion
+
+You will have noticed that in order to use a C library
+a lot of boilerplate code is required.
+It looks unpythonic, and I find it, frankly, quite ugly.
+You may wonder if you have to do this every time you want
+to use a C library from within Python.
+Well, there is some good news and some bad news.
+
+First the bad news: if you are - for whatever reason - limited
+to a pure Python solution for accessing a C library,
+then you will indeed have to create such boilerplate code
+for every library you use.
+
+The good news though is that you only need to do it once
+for each library.
+You can put all the ugly code in a separate Python module
+(e.g. `spam.py`)
+that is dedicated to making the C library available within Python.
+In your production code you can then simply `import spam`,
+and the functions `spam.add`, `spam.swap`, and `spam.do_operation` are
+ready to use, just like any other Python function.
 
