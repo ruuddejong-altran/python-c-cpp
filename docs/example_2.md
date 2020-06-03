@@ -70,7 +70,7 @@ This forces the use of the proper unsigned index type in stead of `int`
 in some places in the Python library.
 Its definition is checked within `Python.h`, so it must be defined
 before `Python.h` is included.
-As of Python 3.8, a `DeprecationWarning` will be raised if did not
+As of Python 3.8, a `DeprecationWarning` will be raised if you did not
 define it, and you use code that checks for this.
 
 Finally, the line `#include spamlib.h` makes the public function definitions in `spamlib`
@@ -80,8 +80,8 @@ available in this extension module.
 
 The next step is to create the wrapper functions that will be called
 by the Python code.
-These wrapper functions must map the (Python) parameters in the function call
-to the corresponding C arguments for the corresponding `spamlib` function.
+These wrapper functions must map the (Python) arguments in the function call
+to the corresponding C parameters for the corresponding `spamlib` function.
 Then they must call the `spamlib` function, and convert the result
 back to a Python object before returning to the caller.
 
@@ -102,7 +102,7 @@ static PyObject *spam_<function>(PyObject *self, PyObject *args)
 
 For stand-alone functions like these,
 the `self` argument points to the module object where the (Python) function lives.
-I.e. if the Python code were to use `import spam` and then call `spam.add(3, 5)`,
+In other words, if the Python code were to use `import spam` and then call `spam.add(3, 5)`,
 the `self` argument would point to the module `spam`.
 
 For instance methods, `self` would point to an actual Python object instance.
@@ -205,7 +205,7 @@ static PyObject * spam_swap(PyObject *self, PyObject *args)
 The code for `do_operation` is more complex.
 
 First of all, the C code must call back to the Python function `operator`.
-That means that we must have to provide a function that is acceptable
+That means that we must have a function that is acceptable
 for the `spamlib.do_operation` function, but that internally calls the
 supplied Python function:
 
@@ -257,15 +257,15 @@ The memory allocated for an object is freed when its
 reference count goes to zero.
 
 The reference count for objects that are passed into a function as arguments
-(such as the callback function that will be stored in `py_callback_func`)
-is not incremented.
+(such as the callback function that is stored in `py_callback_func`)
+is not incremented by the Python machinery.
 The calling function has a reference to these objects,
 and since the calling function suspends execution
 until the called function is finished,
 that reference will remain valid during the execution
 of the called function.
 
-But now we call back from C into Python.
+But now we call back from C back into Python.
 And in principle anything can happen there.
 Including reaching back from the callback function
 to the caller, and deleting the callback function.
@@ -282,7 +282,7 @@ If we were to return without decrementing that reference count,
 the object would still exist on the heap with
 a reference count of 1.
 But our `result` local variable would be out of scope,
-and there would no references left that pointing to this object.
+and there would no references left that point to this object.
 In other words, we would have created a memory leak.
 
 By calling `Py_XDECREF`, we decrement the reference count of the object
@@ -290,8 +290,10 @@ so that its memory can be freed.
 `Py_XDECREF` differs from `Py_DECREF` in that it accepts `NULL` pointers.
 
 Having set the stage for the callback function, the actual wrapper function
-for `do_operation` is again straightforward, but with a few points that require
-attention:
+for `do_operation` is again straightforward.
+The Python callback function is stored in `py_callback_func`,
+and the do_operation function is called with the
+`operator_wrapper_func` as callback function:
 
 ```c
 /* Wrapper function for the do_operation function in spamlib */
@@ -317,10 +319,6 @@ static PyObject * spam_do_operation(PyObject *self, PyObject *args)
 }
 ```
 
-The Python callback function is stored in `py_callback_func`,
-and the do_operation function is called with the
-`operator_wrapper_func` as callback function.
-
 ## Making this a Python extension module
 
 Finally there are some bookkeeping chores that are required to make
@@ -328,7 +326,7 @@ this a proper Python module.
 
 First the functions that are offered by this method must be declared.
 For this we specify their names and addresses in a _method table_.
-This includes the function signature, and optionally its docstrings.
+This table also contains the way arguments are passed to the function, and optionally its docstrings.
 The `METH_VARARGS` flag indicates that the function expects a tuple of positional arguments.
 If we would also require keyword arguments, then we would add the `METH_KEYWORDS`
 flag, like `METH_VARARGS | METH_KEYWORDS`.
@@ -369,7 +367,7 @@ PyMODINIT_FUNC PyInit_spam(void)
 }
 ```
 
-And that's it. Except for the minor but oh-so-frustating-if-forgotten detail for windows:
+And that's it. Except for the minor but oh-so-frustating-if-forgotten detail for Windows:
 the compiled library's extension must be `.pyd` in stead of `.dll`.
 In the example directory I have included a `CMakeLists.txt` file that automatically
 takes care of this.

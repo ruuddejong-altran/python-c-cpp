@@ -97,7 +97,7 @@ we can of course see if we can use it:
 
 `ctypes` converts Python `int`s, `byte` objects and strings automatically,
 and expects by default an integer result value from the C function.
-That is why the `add` function can be called with `spam.add(3,&nbsp;5)`,
+That is why the `add` function can be called with `spam.add(3, 5)`,
 and why the result is represented as a Python integer.
 
 Note that there is very little checking done on the types and number
