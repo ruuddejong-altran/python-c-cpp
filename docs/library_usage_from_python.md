@@ -10,12 +10,12 @@ you sometimes have a need for functionality
 that you know is available in a C or C++ library.
 This is such a common scenario that most popular
 libraries nowadays already have
-a Python wrapper that makes them directly usable in Python.
+Python wrappers that make them directly usable in Python.
 Examples are `pyqt` and `pyzmq`, to name just two at opposite
 sides of the application spectrum (GUI development versus low-level
 network connectivity).
 
-But sometimes all you have is the library (C or C++),
+But sometimes all you have is the library
 and no ready-made Python wrapper.
 Even in such a case you can use the library in Python - it just takes
 a little more effort.
@@ -98,7 +98,7 @@ used from within Python.
 Each example also contains a Python file `demo.py` that illustrates the use
 of the library, similar the the C `main.c` file shown above.
 To execute the `demo.py` file, `cd` to the proper build directory
-(with `spamlib.dll` or `libspamlib.so`),
+(the one that has `spamlib.dll` or `libspamlib.so`),
 and execute `python3 demo.py`.
 
  * [Example 1 - Using ctypes](./example_1.md). This shows a pure Python solution

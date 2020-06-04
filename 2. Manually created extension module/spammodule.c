@@ -66,7 +66,7 @@ static PyObject *py_callback_func = NULL;
  * This is the function that is actually offered to the
  * do_operation function in spamlib.
  */
-static int operator_wrapper_func(int x, int y)
+static int operation_wrapper_func(int x, int y)
 {
     int retval = 0;
 
@@ -109,7 +109,7 @@ static PyObject * spam_do_operation(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    int result = do_operation(x, y, &operator_wrapper_func);
+    int result = do_operation(x, y, &operation_wrapper_func);
     return Py_BuildValue("i", result);
 }
 

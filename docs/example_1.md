@@ -73,7 +73,7 @@ is to try to access it.
 
 The `spam.add` function is *not*
 the real C function from the library.
-Instead it is a (thin) wrapper around this library function.
+Instead it is a (thin) wrapper around the library function.
 This wrapper function, amongst other things, converts the Python integer
 objects in the function call to their C counterparts,
 and converts the C `int` result back into a Python integer object
@@ -134,7 +134,7 @@ in effect repeating in Python what is already specified in the `spamlib.h` heade
 ```
 >>> spam.add.argtypes = [ctypes.c_int, ctypes.c_int]
 >>> spam.add.restype = ctypes.c_int
->>> spam.add(x, y)
+>>> spam.add(3, 5)
 8
 >>> spam.add('abc', 'def')
 Traceback (most recent call last):
@@ -180,7 +180,8 @@ x: 5, y: 3
 
 ## spam.do_operation
 
-Finally, the `do_operation` function requires a callback function.
+Finally, the `do_operation` function.
+This requires a callback function.
 We start by defining the signatures of both the callback function
 and the `do_operation` function itself.
 The callback function signature is defined using
@@ -192,12 +193,12 @@ and for casting a Python function into the expected format
 for a call to the C-library.
 
 ```
->>> operator_functype = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int)
->>> spam.do_operation.argtypes = [ctypes.c_int, ctypes.c_int, operator_functype]
+>>> operation_functype = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int)
+>>> spam.do_operation.argtypes = [ctypes.c_int, ctypes.c_int, operation_functype]
 >>> spam.do_operation.restype = ctypes.c_int
 ```
 
-To use the `do_operator` function, we first need to define a Python function
+To use the `do_operation` function, we first need to define an actual Python function
 that can act as callback function.
 We define a simple `subtract` function, as shown below.
 The `print` function provides evidence that we are indeed calling the Python function
@@ -215,7 +216,7 @@ We can now call `do_operation` with this callback function
 (remember to cast it to the expected type):
 
 ```
->>> spam.do_operation(x, y, operator_functype(subtract))
+>>> spam.do_operation(x, y, operation_functype(subtract))
 Python subtract function called with x=5, y=3
 2
 >>>
@@ -244,3 +245,11 @@ In your production code you can then simply `import spam`,
 and the functions `spam.add`, `spam.swap`, and `spam.do_operation` are
 ready to use, just like any other Python function.
 
+But one major showstopper for general usage of this technique
+is that it only works reliable for C libraries
+(or C++ libraries with an `extern "C"` around the relevant code).
+C++ will perform name-mangling of the library functions,
+and unfortunately this name-mangling is not standardized.
+You would have to know which build system was used
+to create the library in order to apply the correct
+mangling scheme for the exported names.

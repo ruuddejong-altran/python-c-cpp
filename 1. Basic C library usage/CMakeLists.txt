@@ -3,7 +3,6 @@ project("Python-C-C++ Example 1")
 cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 add_library(spamlib SHARED spamlib.c)

@@ -12,7 +12,7 @@ void swap(int* a, int* b)
     *b = tmp;
 }
 
-int do_operation(int a, int b, int (*operator)(int a, int b))
+int do_operation(int a, int b, int (*operation)(int a, int b))
 {
-    return operator(a, b);
+    return operation(a, b);
 }

@@ -204,7 +204,7 @@ static PyObject * spam_swap(PyObject *self, PyObject *args)
 
 The code for `do_operation` is more complex.
 
-First of all, the C code must call back to the Python function `operator`.
+First of all, the C code must call back to the Python function `operation`.
 That means that we must have a function that is acceptable
 for the `spamlib.do_operation` function, but that internally calls the
 supplied Python function:
@@ -212,7 +212,7 @@ supplied Python function:
 ```c
 static PyObject *py_callback_func = NULL;
 
-static int operator_wrapper_func(int x, int y)
+static int operation_wrapper_func(int x, int y)
 {
     int retval = 0;
     
@@ -242,14 +242,13 @@ The actual Python function is stored in the global (yuck) variable `py_callback_
 We call back into the Python code with the `PyObject_CallFunction` call.
 This takes the callback function, a format string, and a series of arguments.
 These latter should be familiar by now.
-
 The Python object that is returned is validated, converted to a C long,
 and returned to the caller.
 
 Please note the `Py_INCREF`, `Py_DECREF`, and `Py_XDECREF` calls.
 Python objects dynamically allocated.
 That means that their storage space must be released
-when they are no longer relevant.
+when they are no longer referenced.
 Python uses reference counting for heap-allocated objects
 (which means: all objects).
 The reference count is an attribute of the `PyObject` structure.
@@ -275,7 +274,7 @@ is temporarily incremented,
 and decremented again after callback function has been called.
 
 The Python object `result` that we get back from the call to `PyObject_CallFunction`
-is a so-called _new_ _reference_, with a reference count of 1.
+is a so-called _new reference_, with a reference count of 1.
 That means that this function owns the only reference to that object.
 
 If we were to return without decrementing that reference count,
@@ -293,7 +292,7 @@ Having set the stage for the callback function, the actual wrapper function
 for `do_operation` is again straightforward.
 The Python callback function is stored in `py_callback_func`,
 and the do_operation function is called with the
-`operator_wrapper_func` as callback function:
+`operation_wrapper_func` as callback function:
 
 ```c
 /* Wrapper function for the do_operation function in spamlib */
@@ -314,7 +313,7 @@ static PyObject * spam_do_operation(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    int result = do_operation(x, y, &operator_wrapper_func);
+    int result = do_operation(x, y, &operation_wrapper_func);
     return Py_BuildValue("i", result);
 }
 ```
