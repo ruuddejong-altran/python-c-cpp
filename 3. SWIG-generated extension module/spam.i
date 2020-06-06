@@ -48,6 +48,7 @@ def do_operation(x, y, operation_func):
     class PythonOperation(_OperationFuncClass):
         def operation_method(self, a, b):
             return operation_func(a, b)
-    return _operation_wrapper(x, y, PythonOperation())
+    python_operation_object = PythonOperation()
+    return _operation_wrapper(x, y, python_operation_object)
 %}
 
