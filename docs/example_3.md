@@ -15,7 +15,12 @@ Fortunately there are tools that can do this for us.
 [Swig](https://swig.org) (Simplified Wrapper and Interface Generator)
 is one such tool that is quite often used
 for exactly this purpose.
-In fact, it can build wrappers for many more languages than just Python. 
+In fact, it can build wrappers for many more languages than just Python.
+
+SWIG generates a hybrid solution: it generates a `spam.py` file that contains
+the Python-language structures required for the interface,
+and a `_spam.pyd` or `_spam.so` shared
+library that contains the C or C++ implementation for the interface.
 
 SWIG works through so-called _interface files_, conventionally with a `.i` extension.
 An interface file has a few parts:
@@ -35,8 +40,27 @@ in order to use C++ code.
 It now looks like:
 
 ```c
+#include "spamlib.h"
 
+int add(int a, int b)
+{
+    return a + b;
+}
+
+void swap(int& a, int& b)
+{
+    int tmp = a;
+    a = b;
+    b = tmp;
+}
+
+int do_operation(int a, int b, std::function<int(int, int)> operator_func)
+{
+    return operator_func(a, b);
+}
 ```
+
+## First attempt
 
 A first attempt at the interface file would e.g. be a file `spam.i` with contents:
 
@@ -75,8 +99,8 @@ generated wrapper source file:
 ```
 
 When we compile and link this wrapper source file
-we get a `spam.py` module that can be imported in Python,
-and works, at least for the `add` function:
+we get a `spam.py` module that can be imported in Python.
+This works for the `add` function:
 
 ```
 >>> import spam
@@ -115,20 +139,25 @@ TypeError: in method 'do_operation', argument 3 of type 'std::function< int (int
 >>>
 ```
 
+## Solving swap
+
 The problem with `swap` is understandable.
 SWIG only looks at the function signatures,
 and cannot know that the parameters
 are used for both input and output.
 We need to provide additional information to SWIG
-in order to handle that.
+in order to operation_method that.
 
-Fortunately SWIG provides some magic directives to handle this
+Fortunately SWIG provides some magic directives to operation_method this
 (and many more) situations where you need special treatment
-of arguments.
+of arguments and argument types.
 The solution for the problem with `swap` is to include the directive `%include "typemaps.i"`
 at the beginning of the interface file.
-This makes it possible to apply (amongst other things)
-`INPUT`, `OUTPUT`, or `INOUT` mapping to function parameters.
+This makes it possible to apply (amongst other things) a mapping
+(`INPUT`, `OUTPUT`, or `INOUT`) to function parameters.
+Parameters mapped with `OUTPUT` or `INOUT` get collected in a tuple
+that forms the return value of the wrapped function.
+
 The only drawback is that we can no longer simply `%include spamlib.h`;
 instead we have to specify the function signatures by hand.
 
@@ -167,4 +196,226 @@ we can see that it now works:
 >>>
 ```
 
+## Solving do_operation
+
 That leaves the problem with the callback function.
+That, unfortunately, takes some more effort.
+There are a few approaches we can take.
+In an upcoming example I want to
+subclass a C++ classes in Python,
+and use that again in C++ code.
+SWIG has a _director_ feature that enables this,
+but in order to use the derived class in C++,
+the original class must have virtual methods.
+
+So, in order to make this work we must:
+
+1. Define a C++ class with a virtual method,
+2. Derive a Python class from this C++ class,
+   and override the virtual method to call the function that we want to call.
+
+Now, we don't want to touch the original C++ library code -- it could be that
+we don't even have access to it.
+And we also don't want to force the Python users of the wrapped code to
+go to the overhead of deriving a subclass from a C++ class that did not
+even exist in the original library.
+
+Fortunately, we can include C++ and Python code in the interface file.
+What's more, we can also instruct SWIG to parse the C++ code
+we add, and generate Python wrappers for it, just as it would
+do for the original library code.
+
+First we must enable the director feature.
+To that end we modify the first line of the `spam.i` interface file:
+
+```
+%module(directors="1") spam
+``` 
+
+The next step is to define the C++ class with the virtual method.
+The `%feature(director)` line tells SWIG to generate code
+that allows C++ to call code defined in a Python subclass of this class.
+And the `%inline` directive tells SWIG to not only include the code
+in the generated C++ wrapper file,
+but to also generate this class in the Python.
+In line with the Python convention,
+the name of the class starts with an underscore,
+to indicate that it is an implementation detail, and not part of the formal interface.
+
+```
+%feature("director") _OperationFuncClass;
+
+%inline %{
+struct _OperationFuncClass {
+    virtual int operation_method(int a, int b) = 0;
+    virtual ~_OperationFuncClass() {}
+};
+%}
+```
+
+Now that we have this class, we need to add some Python code
+to the `spam.i` interface file.
+In the implementation of the `do_operation` function
+we define a (Python) subclass of `_OperatorFuncClass`,
+with the virtual method `operation_method` redefined to
+execute the `operation_func` argument.
+This class is then handed over to a (yet to be defined) C++ function
+`_operation_wrapper`
+that will call the virtual method.
+
+To define the `do_operation` Python function, we include
+the following in the interface file:
+
+```
+%pythoncode
+%{
+def do_operation(x, y, operation_func):
+    class PythonOperation(_OperationFuncClass):
+        def operation_method(self, a, b):
+            return operation_func(a, b)
+    return _operation_wrapper(x, y, PythonOperation())
+%}
+```
+
+The `%pythoncode` directive tells SWIG to include this
+code in the generated `spam.py` file.
+It does not any code for this in the generated `.cpp` file.
+
+Now all that is needed to finish this is to create the `_operation_wrapper`.
+This function must be available both in C++ and Python, so we use
+the `%inline` directive again.
+But since the `do_operation` function in the library expects
+a function as its 3rd argument, and not a method,
+we must again (similar to what we did in [example 2](./example_2.md))
+create a helper function that can be passed as the third argument.
+The helper function, as well as the global variable
+used to store the pointer to the `_OperationFuncClass` instance,
+are relevant only in the C++ code.
+Therefore this part does not have the `%inline` directive.
+
+```
+%{
+static _OperationFuncClass *operation_func_class_ptr = NULL;
+
+static int operation_helper(int a, int b) {
+    return operation_func_class_ptr->operation_method(a, b);
+}
+%}
+
+%inline %{
+int _operation_wrapper(int a, int b, _OperationFuncClass *operation_func_class) {
+    operation_func_class_ptr = operation_func_class;
+    int result = do_operation(a, b, &operation_helper);
+    operation_func_class_ptr = NULL;
+    return result;
+}
+%}
+```
+
+With these additions to the interface file,
+when we rebuild the project,
+we can see that now everything works.
+
+```
+>>> import spam
+>>> x = 3
+>>> y = 5
+>>> spam.add(x, y)
+8
+>>> x, y = spam.swap(x, y)
+>>> print(x, y)
+5 3
+>>> def subtract(a, b):
+...     return a - b
+...
+>>> spam.do_operation(x, y, subtract)
+2
+>>>
+```
+
+# Discussion
+
+To make this example work with SWIG, we had to provide an interface file `spam.i`
+that looks like:
+
+```
+%module(directors="1") spam
+
+%include "typemaps.i"
+
+%begin %{
+#define SWIG_PYTHON_INTERPRETER_NO_DEBUG
+%}
+
+%{
+/* Include header file in generated wrapper code */
+#include "spamlib.h"
+%}
+
+/* Specify the Python-callable wrappers */
+extern int add(int, int);
+extern void swap(int& INOUT, int& INOUT);
+
+%feature("director") _OperationFuncClass;
+
+%inline %{
+struct _OperationFuncClass {
+    virtual int operation_method(int a, int b) = 0;
+    virtual ~_OperationFuncClass() {}
+};
+%}
+
+%{
+static _OperationFuncClass *operation_func_class_ptr = NULL;
+
+static int operation_helper(int a, int b) {
+    return operation_func_class_ptr->operation_method(a, b);
+}
+%}
+
+%inline %{
+int _operation_wrapper(int a, int b, _OperationFuncClass *operation_func_class) {
+    operation_func_class_ptr = operation_func_class;
+    int result = do_operation(a, b, &operation_helper);
+    operation_func_class_ptr = NULL;
+    return result;
+}
+%}
+
+%pythoncode
+%{
+def do_operation(x, y, operation_func):
+    class PythonOperation(_OperationFuncClass):
+        def operation_method(self, a, b):
+            return operation_func(a, b)
+    return _operation_wrapper(x, y, PythonOperation())
+%}
+```
+
+This is quite some programming.
+But much of that is caused by the fact that we want to use
+a Python function as callback to a regular function.
+For real-life C++ applications we would probably already
+have C++ classes that we can inherit from,
+so we would not have to create our own.
+And typically we would use a method call for the callbacks,
+not a function call.
+That would remove the need for the global variable.
+In other words, the ratio of generated-interface-code to manually-written-interface-code
+gets better when we start using actual C++ classes.
+We will see this in the upcoming examples.
+
+Note that, compared with [example 2](./example_2.md),
+we don't do any increments or decrements of the reference counts
+for the Python objects.
+All that is taken care of by the generated C++ wrapper code.
+
+You might think that, just as with [example 2](./example_2.md)
+this code is not thread-safe.
+Actually it is, but that is because SWIG by default disables
+support for multi-threaded Python applications.
+That means that while the wrapped C++ code is running,
+the Python interpreter will not be able to run any other threads.
+You can use SWIG directives to allow or multi-threading
+for a wrapped module,
+and you can even enable or disable thread support for specific methods.

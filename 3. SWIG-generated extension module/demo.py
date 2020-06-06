@@ -2,7 +2,7 @@ import spam
 
 
 def subtract(x, y):
-    print(f"subtract is called with ({x}, {y})")
+    print(f"Python subtract is called with ({x}, {y})")
     return x - y
 
 
