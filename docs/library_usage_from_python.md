@@ -106,3 +106,7 @@ and execute `python3 demo.py`.
  
  * [Example 2 - Manually created extension module](./example_2.md). This shows
    how to code an extension module in C, so that the result can be used directly in Python
+  
+ * [Example 3 - SWIG generated extension module](./example_3.md). This shows how
+   SWIG can be used to generate an interface wrapper.
+   
