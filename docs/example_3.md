@@ -23,7 +23,7 @@ and a `_spam.pyd` or `_spam.so` shared
 library that contains the C or C++ implementation for the interface.
 
 SWIG works through so-called _interface files_, conventionally with a `.i` extension.
-An interface file has a few parts:
+An interface file has a few parts. Minimally needed are:
 
  * Specification of the wrapper's name via the `%module` directive
  * Declaration of external code used by the wrapper.
@@ -182,7 +182,7 @@ extern void do_operation(int, int, int(*)(int, int));
 ```
 
 After rerunning the swig command and compiling the resulting wrapper file,
-we can see that it now works:
+we can see that `swap` now works:
 
 ```
 >>> import spam
@@ -204,7 +204,7 @@ SWIG has a _director_ feature that allows calling back
 from C++ to Python.
 But this requires
 that the Python callback code is an overriden virtual method
-in a class that is derived from a C++ class.
+in a Python class that is derived from a C++ class.
 
 So, in order to make this work we must:
 
@@ -261,13 +261,8 @@ This class is then handed over to a (yet to be defined) C++ function
 `_operation_wrapper`
 that will call the virtual method.
 
-To define the `do_operation` Python function, we include
-the following in the interface file.
-This defines a class that is derived from `_OperatorFuncClass`
-with a redefined `operation_method`, creates an instance of
-that calss, and uses uses that instance as the third argument
-to the `_operation_wrapper` function.
-
+We now define the `do_operation` Python function that we want to
+be included in the generated `spam.py` file.
 ```
 %pythoncode
 %{
@@ -280,16 +275,23 @@ def do_operation(x, y, operation_func):
 %}
 ```
 
+In the function body we define a class
+that is derived from `_OperatorFuncClass`,
+with a redefined `operation_method`.
+We create an instance of that class,
+and we use that instance as the third argument
+to the `_operation_wrapper` function.
+
 The `%pythoncode` directive tells SWIG to include this
 code in the generated `spam.py` file.
-It does not any code for this in the generated `.cpp` file.
+No code occurs in the generated `.cpp` file for this.
 
 Now all that is needed to finish this
 is to create the `_operation_wrapper` function.
 This function must be available both in C++ and Python, so we use
 the `%inline` directive again.
 But since the `do_operation` function in the library expects
-a function as its 3rd argument, and not a method,
+a plain function as its 3rd argument, and not a method,
 we must again (similar to what we did in [example 2](./example_2.md))
 create a helper function that can be passed as the third argument.
 The helper function, as well as the global variable
@@ -317,8 +319,8 @@ int _operation_wrapper(int a, int b, _OperationFuncClass *operation_func_class) 
 ```
 
 With these additions to the interface file,
-when we rebuild the project,
-we can see that now everything works.
+we can rebuild the project
+We see that now everything works.
 
 ```
 >>> import spam
@@ -398,19 +400,20 @@ def do_operation(x, y, operation_func):
 
 This is quite some programming.
 But much of that is caused by the fact that we want to use
-a Python function as callback from a regular C++ function
-that expects a regular function as callback.
+a Python function as callback from a plain C++ function
+that expects a plain function as callback.
 In most real C++ applications the callback function
-would probably already be a method,
+would probably be a method,
 and the entity accepting the callback would most likely
-also be a class instance.
+be a class instance.
 
 For real-life C++ applications we would therefore probably already
 have C++ classes that we can inherit from,
 so we would not have to create our own.
 And if we would use a method call for the callbacks,
 not a function call,
-then that would remove the need for the global variable.
+then that would remove the need for the global variable
+and the helper function.
 In other words, the ratio of generated-interface-code to manually-written-interface-code
 gets better when we start using actual C++ classes.
 We will see this in the upcoming examples.
