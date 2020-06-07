@@ -43,13 +43,13 @@ even for a debug build for our shared library.
 
 The usual way to deal with this is to e.g. explicitly specify
 an optimized library as link dependency for a debug build target.
-But does not work in this case, because the Python header files,
+But that does not work in this case, because the Python header files,
 at least for Windows builds, contain `#pragma` preprocessor statements
 that force the use of the debug version of the Python library.
 
 The recommended way to deal with this is to (temporarily) switch off the
 DEBUG flag when including the Python header file.
-The file `spammodule.c` therefore starts witt
+The file `spammodule.c` therefore starts with
 
 ```c
 #define PY_SSIZE_T_CLEAN
@@ -246,7 +246,7 @@ The Python object that is returned is validated, converted to a C long,
 and returned to the caller.
 
 Please note the `Py_INCREF`, `Py_DECREF`, and `Py_XDECREF` calls.
-Python objects dynamically allocated.
+Python objects are allocated dynamically.
 That means that their storage space must be released
 when they are no longer referenced.
 Python uses reference counting for heap-allocated objects
@@ -368,8 +368,26 @@ PyMODINIT_FUNC PyInit_spam(void)
 
 And that's it. Except for the minor but oh-so-frustating-if-forgotten detail for Windows:
 the compiled library's extension must be `.pyd` in stead of `.dll`.
+Otherwise `import spam` will fail.
 In the example directory I have included a `CMakeLists.txt` file that automatically
 takes care of this.
+
+```
+>>> import spam
+>>> x = 3
+>>> y = 5
+>>> spam.add(x, y)
+8
+>>> x, y = spam.swap(x, y)
+>>> print(x, y)
+5 3
+>>> def subtract(x, y):
+...     return x - y
+...
+>>> spam.do_operation(x, y, subtract)
+2
+>>>
+```
 
 ## Discussion
 
