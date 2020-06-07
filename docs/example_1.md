@@ -182,6 +182,33 @@ x: 5, y: 3
 
 Finally, the `do_operation` function.
 This requires a callback function.
+We define a simple `subtract` function, as shown below.
+The `print` function provides evidence that we are indeed calling the Python function
+from the C library.
+
+```
+>>> def subtract(x, y):
+...     print(f'Python subtract function called with x={x}, y={y}')
+...     return x - y
+...
+>>>
+```
+
+If we simply try to call `do_operation` with this function
+as the third argument, we get:
+
+```
+>>> spam.do_operation(x, y, subtract)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ctypes.ArgumentError: argument 3: <class 'TypeError'>: Don't know how to convert parameter 3
+>>>
+```
+
+The C code requires a C function pointer, and `ctypes`
+cannot automatically convert a Python function to the corresponding C function.
+We need to provide some assistance.
+
 We start by defining the signatures of both the callback function
 and the `do_operation` function itself.
 The callback function signature is defined using
@@ -198,21 +225,7 @@ for a call to the C-library.
 >>> spam.do_operation.restype = ctypes.c_int
 ```
 
-To use the `do_operation` function, we first need to define an actual Python function
-that can act as callback function.
-We define a simple `subtract` function, as shown below.
-The `print` function provides evidence that we are indeed calling the Python function
-from the C library.
-
-```
->>> def subtract(x, y):
-...     print(f'Python subtract function called with x={x}, y={y}')
-...     return x - y
-...
->>>
-```
-
-We can now call `do_operation` with this callback function
+We can now call `do_operation` with the callback function
 (remember to cast it to the expected type):
 
 ```

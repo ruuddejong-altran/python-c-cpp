@@ -203,102 +203,11 @@ That, unfortunately, takes some more effort.
 Let us first look at the generated code to see if we can
 identify the problem.
 
-Looking at the generated `spam.py` code, we see that it imports
-the C++ shared library `_spam`
-at the beginning of the file,
-and that the code for the interface functions is at the end.
-It simply passes on the arguments to the corresponding function
-in the `_spamm` module.
-
-```python
-...
-# Import the low-level C/C++ module
-if __package__ or "." in __name__:
-    from . import _spam
-else:
-    import _spam
-...
-...
-def add(arg1, arg2):
-    return _spam.add(arg1, arg2)
-
-def swap(arg1, arg2):
-    return _spam.swap(arg1, arg2)
-
-def do_operation(arg1, arg2, arg3):
-    return _spam.do_operation(arg1, arg2, arg3)
-```
-
-When we look at the generated `.cpp` file (search for `do_operation`),
-we see that this function first unwraps the arguments
-and converts them from Python objects into the corresponding
-C++ values.
-
-```c
-SWIGINTERN PyObject *_wrap_do_operation(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  int arg1 ;
-  int arg2 ;
-  std::function< int (int,int) > arg3 ;
-  int val1 ;
-  int ecode1 = 0 ;
-  int val2 ;
-  int ecode2 = 0 ;
-  void *argp3 ;
-  int res3 = 0 ;
-  PyObject *swig_obj[3] ;
-  int result;
-```
-
-The code first unpacks the `args` tuple in the `swig_obj` array:
-```c
-  if (!SWIG_Python_UnpackTuple(args, "do_operation", 3, 3, swig_obj)) SWIG_fail;
-```
-
-In particular, the code tries to convert the third argument
-to a `function<int(int, int)>` pointer.
-
-```c
-    res3 = SWIG_ConvertPtr(swig_obj[2], &argp3, SWIGTYPE_p_std__functionT_int_fint_intF_t,  0  | 0);
-    if (!SWIG_IsOK(res3)) {
-      SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "do_operation" "', argument " "3"" of type '" "std::function< int (int,int) >""'"); 
-    }  
-```
-
-When we look back to [example 1](./example_1.md),
-we see that trying to call `do_operation` with a Python function
-gave a similar result.
-We solved it there by defining a transformation class that could
-cast a Python function in a C function pointer.
-However, when we try to do this here, it still fails:
-
-```
->>> import ctypes
->>> functype = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int)
->>> import spam
->>> def subtract(x, y):
-...     return x - y
-...
->>> spam.do_operation(5, 3, functype(subtract))
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "D:\GitHub\python-c-cpp\3. SWIG-generated extension module\cmake-build-debug\spam.py", line 72, in do_operation
-    return _spam.do_operation(arg1, arg2, arg3)
-TypeError: in method 'do_operation', argument 3 of type 'std::function< int (int,int) >'
->>>
-```
-
-Apparently the SWIG-generated code is not prepared to accept our `ctypes` function type
-as equivalent to a `std::function< int (int, int)>`.
-I did not investigate this further,
-because using `ctypes` for this is still a band-aid, at best.
-I want to present a more generic method that is somewhat more work
-in this case, but that opens up complete bi-directional C++ / Python interworking.
 
 SWIG has a _director_ feature that allows calling back
 from C++ to Python.
-This requires though
-that the Python callback is an overriden virtual method
+But this requires
+that the Python callback code is an overriden virtual method
 in a Python class that is derived from a C++ class.
 
 So, in order to make this work we must:
@@ -312,7 +221,6 @@ we don't even have access to it.
 And we also don't want to force the Python users of the wrapped code to
 go to the overhead of deriving a subclass from a C++ class that did not
 even exist in the original library.
-Instead we want all of this to happen in the interface code.
 
 Fortunately, we can simply include C++ and Python code in the interface file.
 What's more, we can also instruct SWIG to parse the C++ code
@@ -349,19 +257,16 @@ struct _OperationFuncClass {
 
 Now that we have this class, we need to add some Python code
 to the `spam.i` interface file.
-We simply define the `do_operation` Python function that we want to
-be included in the generated `spam.py` file.
-That also means that the original `do_operation` from the `spamlib`
-library is not wrapped anymore.
-
 In the implementation of the `do_operation` function
 we define a (Python) subclass of `_OperatorFuncClass`,
 with the virtual method `operation_method` redefined to
 execute the `operation_func` argument.
-An instance of this class is then handed over to a (yet to be defined) C++ function
+This class is then handed over to a (yet to be defined) C++ function
 `_operation_wrapper`
 that will call the virtual method.
 
+We now define the `do_operation` Python function that we want to
+be included in the generated `spam.py` file.
 ```
 %pythoncode
 %{
@@ -373,6 +278,13 @@ def do_operation(x, y, operation_func):
     return _operation_wrapper(x, y, python_operation_object)
 %}
 ```
+
+In the function body we define a class
+that is derived from `_OperatorFuncClass`,
+with a redefined `operation_method`.
+We create an instance of that class,
+and we use that instance as the third argument
+to the `_operation_wrapper` function.
 
 The `%pythoncode` directive tells SWIG to include this
 code in the generated `spam.py` file.
@@ -499,7 +411,7 @@ would probably be a method,
 and the entity accepting the callback would most likely
 be a class instance.
 
-For real-life C++ applications we would therefore most likely already
+For real-life C++ applications we would therefore probably already
 have C++ classes that we can inherit from,
 so we would not have to create our own.
 And if we would use a method call for the callbacks,
