@@ -1,4 +1,4 @@
-project("Python-C-C++ Example 2")
+project("Python-C-C++ Example 4")
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -25,19 +25,19 @@ endif (SWIG_FOUND)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${Python3_INCLUDE_DIRS})
 
-add_library(spamlib SHARED spamlib.cpp)
+add_library(trafficlightlib SHARED light.cpp traffic_light.cpp)
 
 add_executable(demo main.cpp)
-target_link_libraries(demo spamlib)
+target_link_libraries(demo trafficlightlib)
 
-set_property(SOURCE spam.i PROPERTY
+set_property(SOURCE trafficlight.i PROPERTY
         CPLUSPLUS ON
-        DEPENDS spamlib)
+        DEPENDS trafficlightlib)
 
-swig_add_library(spam TYPE SHARED LANGUAGE python
+swig_add_library(trafficlight TYPE SHARED LANGUAGE python
         OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
-        SOURCES spam.i)
-swig_link_libraries(spam spamlib ${Python3_LIBRARIES})
+        SOURCES trafficlight.i)
+swig_link_libraries(trafficlight trafficlightlib ${Python3_LIBRARIES})
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/demo.py
@@ -47,5 +47,5 @@ add_custom_command(
 add_custom_target(copy_demo DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/demo.py)
 
 add_dependencies(demo copy_demo)
-add_dependencies(spamlib copy_demo)
-add_dependencies(spam copy_demo)
+add_dependencies(trafficlightlib copy_demo)
+add_dependencies(trafficlight copy_demo)

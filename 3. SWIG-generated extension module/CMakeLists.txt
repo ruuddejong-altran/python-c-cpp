@@ -1,4 +1,4 @@
-project("Python-C-C++ Example 2")
+project("Python-C-C++ Example 3")
 
 cmake_minimum_required(VERSION 3.15)
 
