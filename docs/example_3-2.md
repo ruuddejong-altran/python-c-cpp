@@ -11,18 +11,18 @@ We saw that using SWIG requires learning a new language
 (for the interface specification file),
 and requires still a lot of manual coding for the callback function.
 
-An alternative wrapper generator is `pybind`.
+An alternative wrapper generator is `pybind11`.
 As the name suggests, this can generate Python wrappers only,
 and requires that the wrapped language is at least C++11.
 It is therefore much more limited than SWIG.
 
-Pybind11 is not a tool that can be installed.
+`pybind11` is not a tool that can be installed.
 Instead it is essentially a collection of header files.
 The recommended way to use `pybind11` is to include its
 repository in a Git submodule of your own project.
 You can then use the extra CMake functions defined
 by `pybind11` to generate the wrapper.
-In this example, only following additional lines are required
+In this example, essentially only the following additional lines are required
 in CMakeLists.txt to generate the extension module:
 
 ```
@@ -58,7 +58,7 @@ Next is the module definition that uses the `PYBIND11_MODULE` macro.
 Note the similarity with the manually code module definition
 in [example 2](./example_2.md).
 
-Note that the `swap` function from `spamlib` is actually the only
+The `swap` function from `spamlib` is actually the only
 function that is wrapped, so that it can return
 a result tuple.
 The functions `add` and `do_operation` are simply delegated
