@@ -3,7 +3,7 @@ layout: default
 title: Example 3
 ---
 
-# Example 3 - SWIG-generated extension module
+# Example 3-1 - SWIG-generated extension module
 
 In [example 1](./example_1.md) we saw a pure Python solution
 for using a C-library,
@@ -15,9 +15,11 @@ Fortunately there are tools that can do this for us.
 [SWIG](https://swig.org) (Simplified Wrapper and Interface Generator)
 is one such tool that is quite often used
 for exactly this purpose.
-In fact, it can build wrappers for many more languages than just Python.
+In fact, it can build wrappers for many more languages than just Python,
+and it supports both C and C++ as wrapped languages.
 
-SWIG creates a hybrid solution: it generates a `spam.py` file that contains
+In stead of a pure Python or a pure C (or C++) solution,
+SWIG generates a hybrid solution: it creates a `spam.py` file that contains
 the Python-language definitions required for the interface,
 and a `_spam.pyd` or `_spam.so` shared
 library that contains the C or C++ implementation for the interface.
@@ -178,7 +180,7 @@ instead we have to specify the function signatures by hand.
 /* Specify the Python-callable wrappers */
 extern int add(int, int);
 extern void swap(int& INOUT, int& INOUT);
-extern void do_operation(int, int, int(*)(int, int));
+extern void do_operation(int, int, std::function<int(int, int)>);
 ```
 
 After rerunning the swig command and compiling the resulting wrapper file,
@@ -490,15 +492,14 @@ def do_operation(x, y, operation_func):
 %}
 ```
 
-This is quite some programming.
-But much of that is caused by the fact that we want to use
+This is quite some programming,
+much of which is caused by the fact that we want to use
 a Python function as callback from a plain C++ function
 that expects a plain function as callback.
 In most real C++ applications the callback function
 would probably be a method,
 and the entity accepting the callback would most likely
 be a class instance.
-
 For real-life C++ applications we would therefore most likely already
 have C++ classes that we can inherit from,
 so we would not have to create our own.
@@ -524,3 +525,7 @@ the Python interpreter will not be able to run any other threads.
 You can use SWIG directives to allow multi-threading
 for a wrapped module,
 and you can even enable or disable thread support for specific methods.
+
+But still, using SWIG requires a steep learning curve:
+the interface file has its own language, with various
+magic incantations to make everything work.
