@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Example 3
+title: Example 3-1
 ---
 
 # Example 3-1 - SWIG-generated extension module
@@ -102,10 +102,23 @@ generated wrapper source file:
 
 When we compile and link this wrapper source file
 we get a `spam.py` module that can be imported in Python.
-We can see the `add` function works:
+We can start a Python session in the build directory
+and see what we can do with the generated module.
 
 ```
 >>> import spam
+>>> dir(spam)
+['_SwigNonDynamicMeta', '__builtin__', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', '_spam', '_swig_add_metaclass', '_swig_python_version_info', '_swig_repr', '_swig_setattr_nondynamic_class_variable', '_
+swig_setattr_nondynamic_instance_variable', 'add', 'do_operation', 'swap', 'weakref']
+>>>
+```
+
+We see that the interface offered by `spam` contains a lot of SWIG-related items.
+But near the end of the list we can see that the three functions from
+`spamlib` are indeed wrapped.
+And the `add` function works:
+
+```
 >>> spam.add(3, 5)
 8
 ```

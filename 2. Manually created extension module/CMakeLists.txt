@@ -22,12 +22,5 @@ target_link_libraries(spam PRIVATE spamlib)
 add_executable(demo main.c)
 target_link_libraries(demo spamlib)
 
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/demo.py
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/demo.py ${CMAKE_CURRENT_BINARY_DIR}
-        MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/demo.py)
-
-add_custom_target(copy_demo DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/demo.py)
-
-add_dependencies(demo copy_demo)
-add_dependencies(spamlib copy_demo)
+add_custom_target(copy_demo ALL
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/demo.py ${CMAKE_CURRENT_BINARY_DIR})
