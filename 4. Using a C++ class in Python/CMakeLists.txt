@@ -16,12 +16,15 @@ else (Python3_Development_FOUND)
     message(ERROR "Python3 development files not found")
 endif (Python3_Development_FOUND)
 
+find_package(Threads REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${Python3_INCLUDE_DIRS})
 
 add_subdirectory(../pybind11 ${CMAKE_CURRENT_BINARY_DIR}/pybind11)
 
 add_library(trafficlib SHARED light.cpp traffic_light.cpp)
+target_link_libraries(trafficlib Threads::Threads)
 
 pybind11_add_module(traffic MODULE traffic.cpp)
 target_link_libraries(traffic PRIVATE trafficlib)
