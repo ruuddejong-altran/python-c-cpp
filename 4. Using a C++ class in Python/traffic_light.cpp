@@ -1,16 +1,10 @@
+#include <algorithm>
 #include <chrono>
-#include <condition_variable>
-#include <functional>
-#include <iterator>
-#include <memory>
-#include <mutex>
-#include <thread>
-#include "light.h"
+#include <map>
+
 #include "traffic_light.h"
 
-
-TrafficLight::TrafficLight(const std::function<std::shared_ptr<Light>()>& light_factory,
-                           TrafficLight::State initial_state) :
+TrafficLight::TrafficLight(State initial_state) :
         current_state_(State::Off),
         state_change_cb_list_(),
         transition_sequence_(),
@@ -20,9 +14,7 @@ TrafficLight::TrafficLight(const std::function<std::shared_ptr<Light>()>& light_
 {
     for (auto& name : light_names)
     {
-        auto light = light_factory();
-        lights_.push_back(light);
-        light_map_[name] = light;
+        lights_.emplace_back(Light::MakeLight());
     }
     Init(initial_state);
 }
@@ -42,10 +34,10 @@ TrafficLight::TrafficLight::State TrafficLight::GetState()
 
 void TrafficLight::Init(TrafficLight::State initial_state)
 {
-    SetState(initial_state);
+    TransitToState(initial_state);
 }
 
-void TrafficLight::SetState(TrafficLight::State target_state)
+void TrafficLight::TransitToState(TrafficLight::State target_state)
 {
     if (current_state_ != target_state)
     {
@@ -66,73 +58,66 @@ void TrafficLight::SetState(TrafficLight::State target_state)
                 break;
         }
         PrepareTransition(from_state, target_state);
-        transition_thread_ = std::thread(&TrafficLight::RunTransition, this, target_state);
+        transition_thread_ = std::thread(&TrafficLight::RunTransition, this);
     }
 }
 
-void TrafficLight::PrepareTransition(State /*from_state*/, State target_state)
+void TrafficLight::PrepareTransition(State from_state, State target_state)
 {
     transition_sequence_.clear();
     switch (target_state)
     {
         case State::Open:
-            transition_sequence_.push_back({{LS::Off, LS::Off, LS::On}, 3000});
+            transition_sequence_.push_back(
+                    {State::Open, {Light::State::Off, Light::State::Off, Light::State::On}, 3000});
             break;
         case State::Closed:
-            transition_sequence_.push_back({{LS::Off, LS::On, LS::Off}, 2000});
-            transition_sequence_.push_back({{LS::On, LS::Off, LS::Off}, 3000});
+            transition_sequence_.push_back(
+                    {State::Closing, {Light::State::Off, Light::State::On, Light::State::Off}, 2000});
+            transition_sequence_.push_back(
+                    {State::Closed, {Light::State::On, Light::State::Off, Light::State::Off}, 3000});
             break;
         case State::Warning:
-            transition_sequence_.push_back({{LS::Off, LS::Flashing, LS::Off}, 3000});
+            transition_sequence_.push_back(
+                    {State::Warning, {Light::State::Off, Light::State::Flashing, Light::State::Off}, 3000});
             break;
         case State::Off:
-            transition_sequence_.push_back({{LS::Off, LS::Off, LS::Off}, 3000});
+            transition_sequence_.push_back(
+                    {State::Off, {Light::State::Off, Light::State::Off, Light::State::Off}, 3000});
             break;
         default:
             break;
     }
 }
 
-void TrafficLight::RunTransition(State to_state)
+void TrafficLight::RunTransition()
 {
     const std::lock_guard<std::mutex> lock(transition_mutex_);
-    size_t n = transition_sequence_.size();
-    for (auto const&[pattern, delay_ms] : transition_sequence_)
+    for (auto const&[state, pattern, delay_ms] : transition_sequence_)
     {
-        if (--n == 0)
-        {
-            // Final transition pattern. Set current state to target state.
-            current_state_ = to_state;
-        }
+        current_state_ = state;
         SetLightPatternAndWait(pattern, delay_ms);
     }
 }
 
 void TrafficLight::SetLightPatternAndWait(TrafficLight::LightPattern pattern, int delay_ms)
 {
-    SetLightPattern(pattern);
+    SetLightPattern(std::move(pattern));
     std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
 }
 
 void TrafficLight::SetLightPattern(TrafficLight::LightPattern pattern)
 {
     const std::lock_guard<std::mutex> lock(lights_mutex_);
-
-    auto light_iterator = lights_.begin();
     auto value_iterator = pattern.begin();
-    while ((light_iterator != lights_.end()) && (value_iterator != pattern.end()))
-    {
-        auto light = *light_iterator++;
-        auto value = *value_iterator++;
-        light->SetState(value);
-    }
+    std::for_each(lights_.begin(), lights_.end(), [&](auto& light) { light->SetState(*value_iterator++); });
     for (auto& func : state_change_cb_list_)
     {
         RunCallbackFunction(func);
     }
 }
 
-TrafficLight::LightNames TrafficLight::GetLightNames()
+std::vector<std::string> TrafficLight::GetLightNames()
 {
     return light_names;
 }
@@ -140,12 +125,8 @@ TrafficLight::LightNames TrafficLight::GetLightNames()
 TrafficLight::LightPattern TrafficLight::GetLightPattern()
 {
     TrafficLight::LightPattern result = TrafficLight::LightPattern();
-    auto result_iterator = result.begin();
-    auto light_iterator = lights_.begin();
-    while ((result_iterator != result.end()) && (light_iterator != lights_.end()))
-    {
-        *result_iterator++ = (*light_iterator++)->GetState();
-    }
+    std::transform(lights_.begin(), lights_.end(), std::back_inserter(result),
+            [](auto& light) -> Light::State { return light->GetState(); });
     return result;
 }
 
@@ -159,30 +140,34 @@ void TrafficLight::RunCallbackFunction(const TrafficLight::CallbackFunction& fun
     func(this);
 }
 
-void TrafficLight::Open()
+void TrafficLight::MoveTo(TrafficLight::State target_state)
 {
-    SetState(State::Open);
+    switch (target_state)
+    {
+        case State::Off:
+            TransitToState(State::Off);
+            break;
+        case State::Closed:
+            TransitToState(State::Closed);
+            break;
+        case State::Open:
+            TransitToState(State::Open);
+            break;
+        case State::Warning:
+            TransitToState(State::Warning);
+            break;
+        default:
+            /* Unsupported target states */
+            break;
+    }
 }
 
-void TrafficLight::Close()
-{
-    SetState(State::Closed);
-}
-
-void TrafficLight::Warning()
-{
-    SetState(State::Warning);
-}
-
-void TrafficLight::Off()
-{
-    SetState(State::Off);
-}
+const std::vector<std::string> TrafficLight::light_names{"red", "amber", "green"};
 
 std::ostream& operator<<(std::ostream& out, TrafficLight::State state)
 {
     static std::map<TrafficLight::State, std::string> stateStrings;
-    if (stateStrings.size() == 0)
+    if (stateStrings.empty())
     {
         auto extractEnumSymbol = [](const std::string& s)
         {

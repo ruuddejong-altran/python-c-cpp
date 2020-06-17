@@ -172,7 +172,7 @@ do_operation(...) method of builtins.PyCapsule instance
 ```
 
 This is already far more helpful than what we get for the SWIG-generated module.
-But we can easily make this even better.
+But we can make this even better.
 `pybind11` gives an easy way to provide docstrings to modules and functions,
 and to provide names to the arguments.
 The `.def()` method of a module takes additional arguments
@@ -263,7 +263,7 @@ PYBIND11_MODULE(spam, m)
 
 `pybind11` gives the possibility to create Python wrappers for C++ code
 that is compiled with C++11 or later.
-It requires a minimal amount of user-defined code to get a useable result.
+It requires a minimal amount of user-defined code to get a usable result.
 So why would you not always use this in stead of SWIG?
 
 It depends on your audience.

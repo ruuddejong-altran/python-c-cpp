@@ -1,21 +1,15 @@
-import spam
+from traffic_light import Light, TrafficLight
 
 
-def subtract(x, y):
-    print(f"Python subtract is called with ({x}, {y})")
-    return x - y
+def monitor(tl):
+    print(f"""[Python] State: {tl.state}, ({', '.join('{n}: {v}' for n, v in zip(tl.LightNames, tl.LightPattern))})""")
+
 
 
 if __name__ == '__main__':
-    x = 3
-    y = 5
-    print(f"x = {x}, y = {y}")
-
-    result = spam.add(x, y)
-    print(f"spam.add({x}, {y}) gives {result}")
-
-    x, y = spam.swap(x, y)
-    print(f"After spam.swap(), x = {x}, y = {y}")
-
-    result = spam.do_operation(x, y, subtract)
-    print(f"do_operation({x}, {y}, subtract) gives {result}")
+    tl = TrafficLight(Light)
+    tl.Close()
+    tl.Open()
+    tl.Close()
+    tl.Warning()
+    tl.Off()
