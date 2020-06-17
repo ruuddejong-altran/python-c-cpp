@@ -14,41 +14,40 @@
 /* Specify the Python-callable wrappers */
 extern int add(int, int);
 extern void swap(int& INOUT, int& INOUT);
-extern void do_operation(int, int, std::function<int(int, int)>);
 
-//%feature("director") _OperationFuncClass;
-//
-//%inline %{
-//struct _OperationFuncClass {
-//    virtual int operation_method(int a, int b) = 0;
-//    virtual ~_OperationFuncClass() {}
-//};
-//%}
-//
-//%{
-//static _OperationFuncClass *operation_func_class_ptr = NULL;
-//
-//static int operation_helper(int a, int b) {
-//    return operation_func_class_ptr->operation_method(a, b);
-//}
-//%}
-//
-//%inline %{
-//int _operation_wrapper(int a, int b, _OperationFuncClass *operation_func_class) {
-//    operation_func_class_ptr = operation_func_class;
-//    int result = do_operation(a, b, &operation_helper);
-//    operation_func_class_ptr = NULL;
-//    return result;
-//}
-//%}
-//
-//%pythoncode
-//%{
-//def do_operation(x, y, operation_func):
-//    class PythonOperation(_OperationFuncClass):
-//        def operation_method(self, a, b):
-//            return operation_func(a, b)
-//    python_operation_object = PythonOperation()
-//    return _operation_wrapper(x, y, python_operation_object)
-//%}
+%feature("director") _OperationFuncClass;
+
+%inline %{
+struct _OperationFuncClass {
+    virtual int operation_method(int a, int b) = 0;
+    virtual ~_OperationFuncClass() {}
+};
+%}
+
+%{
+static _OperationFuncClass *operation_func_class_ptr = NULL;
+
+static int operation_helper(int a, int b) {
+    return operation_func_class_ptr->operation_method(a, b);
+}
+%}
+
+%inline %{
+int _operation_wrapper(int a, int b, _OperationFuncClass *operation_func_class) {
+    operation_func_class_ptr = operation_func_class;
+    int result = do_operation(a, b, &operation_helper);
+    operation_func_class_ptr = NULL;
+    return result;
+}
+%}
+
+%pythoncode
+%{
+def do_operation(x, y, operation_func):
+    class PythonOperation(_OperationFuncClass):
+        def operation_method(self, a, b):
+            return operation_func(a, b)
+    python_operation_object = PythonOperation()
+    return _operation_wrapper(x, y, python_operation_object)
+%}
 
