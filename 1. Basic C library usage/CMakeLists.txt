@@ -11,4 +11,4 @@ add_executable(demo main.c)
 target_link_libraries(demo spamlib)
 
 add_custom_target(copy_demo ALL
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/demo.py ${CMAKE_CURRENT_BINARY_DIR})
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/demo.py ${CMAKE_CURRENT_SOURCE_DIR}/spam.py ${CMAKE_CURRENT_BINARY_DIR})
