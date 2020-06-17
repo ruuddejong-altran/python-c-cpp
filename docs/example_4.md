@@ -45,6 +45,7 @@ The header file `light.h` looks like:
 
 ```c
 #include <iostream>
+#include <memory>
 
 class Light
 {
@@ -57,7 +58,7 @@ public:
     explicit Light(State state=Off);
     ~Light();
     virtual State GetState() const;
-    virtual void MoveTo(State state);
+    virtual void SetState(State state);
     static std::unique_ptr<Light> MakeLight();
 
 private:

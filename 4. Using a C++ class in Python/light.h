@@ -2,6 +2,7 @@
 #define PYTHON_C_C_EXAMPLE_4_LIGHT_H
 
 #include <iostream>
+#include <memory>
 
 class Light
 {
