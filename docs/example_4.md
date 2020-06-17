@@ -666,6 +666,9 @@ would be to buffer the requests.
 
 I rewrote the TrafficLight class, so that the state change
 requests are buffered.
+With this change, a TrafficLight instance has a long-running thread
+that waits until a transition request arrives,
+or the TrafficLight instance is destroyed.
 The `force_closed` callback now works as expected:
 
 ```text
@@ -688,3 +691,4 @@ t.MoveTo(t.State.Open)
 State.Closing (red: Off, amber: On, green: Off)
 State.Closed (red: On, amber: Off, green: Off)
 ```
+
