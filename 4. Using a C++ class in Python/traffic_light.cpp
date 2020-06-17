@@ -8,9 +8,13 @@ TrafficLight::TrafficLight(State initial_state) :
         current_state_(State::Off),
         state_change_cb_list_(),
         transition_sequence_(),
-        transition_thread_(),
+        transition_thread_(std::thread(&TrafficLight::TransitionRunner, this)),
         lights_mutex_(),
-        transition_mutex_()
+        transition_buffer_(),
+        transition_mutex_(),
+        transition_cv(),
+        stop_signal_(),
+        stop_transition_thread_(stop_signal_.get_future())
 {
     for (auto& name : light_names)
     {
@@ -21,6 +25,7 @@ TrafficLight::TrafficLight(State initial_state) :
 
 TrafficLight::~TrafficLight()
 {
+    stop_signal_.set_value();
     if (transition_thread_.joinable())
     {
         transition_thread_.join();
@@ -34,17 +39,13 @@ TrafficLight::TrafficLight::State TrafficLight::GetState()
 
 void TrafficLight::Init(TrafficLight::State initial_state)
 {
-    TransitToState(initial_state);
+    MoveTo(initial_state);
 }
 
 void TrafficLight::TransitToState(TrafficLight::State target_state)
 {
     if (current_state_ != target_state)
     {
-        if (transition_thread_.joinable())
-        {
-            transition_thread_.join();
-        }
         State from_state = current_state_;
         switch (target_state)
         {
@@ -58,7 +59,7 @@ void TrafficLight::TransitToState(TrafficLight::State target_state)
                 break;
         }
         PrepareTransition(from_state, target_state);
-        transition_thread_ = std::thread(&TrafficLight::RunTransition, this);
+        RunTransition();
     }
 }
 
@@ -90,9 +91,33 @@ void TrafficLight::PrepareTransition(State from_state, State target_state)
     }
 }
 
+void TrafficLight::TransitionRunner()
+{
+    State next_state;
+    while (true)
+    {
+        using namespace std::chrono_literals;
+        {
+            std::unique_lock<std::mutex> lock(transition_mutex_);
+            while (transition_buffer_.empty())
+            {
+                transition_cv.wait_for(lock, 1ms);
+                if (transition_buffer_.empty() && stop_transition_thread_.wait_for(1ms) != std::future_status::timeout)
+                {
+                    // thread has been asked to stop
+                    return;
+                }
+            }
+
+            next_state = transition_buffer_.front();
+            transition_buffer_.pop();
+        }
+        TransitToState(next_state);
+    }
+}
+
 void TrafficLight::RunTransition()
 {
-    const std::lock_guard<std::mutex> lock(transition_mutex_);
     for (auto const&[state, pattern, delay_ms] : transition_sequence_)
     {
         current_state_ = state;
@@ -145,16 +170,10 @@ void TrafficLight::MoveTo(TrafficLight::State target_state)
     switch (target_state)
     {
         case State::Off:
-            TransitToState(State::Off);
-            break;
         case State::Closed:
-            TransitToState(State::Closed);
-            break;
         case State::Open:
-            TransitToState(State::Open);
-            break;
         case State::Warning:
-            TransitToState(State::Warning);
+            AddStateToTransitionBuffer(target_state);
             break;
         default:
             /* Unsupported target states */
@@ -163,6 +182,13 @@ void TrafficLight::MoveTo(TrafficLight::State target_state)
 }
 
 const std::vector<std::string> TrafficLight::light_names{"red", "amber", "green"};
+
+void TrafficLight::AddStateToTransitionBuffer(TrafficLight::State state)
+{
+    std::lock_guard<std::mutex> lock(transition_mutex_);
+    transition_buffer_.push(state);
+    transition_cv.notify_all();
+}
 
 std::ostream& operator<<(std::ostream& out, TrafficLight::State state)
 {

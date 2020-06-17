@@ -638,3 +638,53 @@ $
 ```
 
 OK. That did not work. The application crashed hard.
+The Visual Studio runtime does not give any helpful information,
+but running this example on Linux gives more info:
+
+```text
+terminate called after throwing an instance of 'pybind11::error_already_set'
+  what():  RuntimeError: Resource deadlock avoided
+
+At:
+  <stdin>(3): force_closed
+
+Aborted (core dumped)
+```
+
+Looking back, we can see that we try to trigger a state transition
+while another transition was already in progress.
+We've found a bug in the original TrafficLight implementation.
+So the question now is: how should we handle a state transition
+request that arrives while another transition is still in progress?
+The current behaviour (crash the application) is obviously not
+acceptable.
+Silently ignoring the request would be a possible solution,
+but this would lead to hard-to-find problems in an application that
+controls multiple traffic lights.
+The only feasible solution from a business point of view
+would be to buffer the requests.
+
+I rewrote the TrafficLight class, so that the state change
+requests are buffered.
+The `force_closed` callback now works as expected:
+
+```text
+>>> import traffic
+>>> t = traffic.TrafficLight()
+>>> def monitor(tl):
+...     print(f"{tl.state} ({', '.join(f'{name}: {state.name}' for name, state in zip(tl.names, tl.pattern))})")
+...
+>>> def force_closed(tl):
+...     if tl.state == tl.State.Open:
+...         tl.MoveTo(tl.State.Closed)
+...
+>>> t.AddCallback(monitor)
+>>> t.AddCallback(force_closed)
+>>> t.MoveTo(t.State.Closed)
+State.Closing (red: Off, amber: On, green: Off)
+>>> State.Closed (red: On, amber: Off, green: Off)
+t.MoveTo(t.State.Open)
+>>> State.Open (red: Off, amber: Off, green: On)
+State.Closing (red: Off, amber: On, green: Off)
+State.Closed (red: On, amber: Off, green: Off)
+```

@@ -1,10 +1,13 @@
 #ifndef PYTHON_C_C_EXAMPLE_4_TRAFFIC_LIGHT_H
 #define PYTHON_C_C_EXAMPLE_4_TRAFFIC_LIGHT_H
 
+#include <condition_variable>
 #include <functional>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <string>
 #include <thread>
 #include <vector>
@@ -42,6 +45,8 @@ private:
     void SetLightPattern(LightPattern pattern);
     void SetLightPatternAndWait(LightPattern pattern, int delay_ms);
     void TransitToState(State target_state);
+    void AddStateToTransitionBuffer(State state);
+    void TransitionRunner();
 
     State current_state_;
     std::vector<std::unique_ptr<Light>> lights_;
@@ -49,7 +54,12 @@ private:
     TransitionSequence transition_sequence_;
     std::thread transition_thread_;
     std::mutex lights_mutex_;
+    std::queue<State> transition_buffer_;
     std::mutex transition_mutex_;
+    std::condition_variable transition_cv;
+    std::promise<void> stop_signal_;
+    std::future<void> stop_transition_thread_;
+
 };
 
 std::ostream& operator<<(std::ostream& out, TrafficLight::State state);
