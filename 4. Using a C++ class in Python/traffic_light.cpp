@@ -14,7 +14,8 @@ TrafficLight::TrafficLight(State initial_state) :
         transition_mutex_(),
         transition_cv(),
         stop_signal_(),
-        stop_transition_thread_(stop_signal_.get_future())
+        stop_transition_thread_(stop_signal_.get_future()),
+        busy_(false)
 {
     for (auto& name : light_names)
     {
@@ -25,6 +26,7 @@ TrafficLight::TrafficLight(State initial_state) :
 
 TrafficLight::~TrafficLight()
 {
+    std::cout << "Destroying TrafficLight instance" << std::endl;
     stop_signal_.set_value();
     if (transition_thread_.joinable())
     {
@@ -101,6 +103,7 @@ void TrafficLight::TransitionRunner()
             std::unique_lock<std::mutex> lock(transition_mutex_);
             while (transition_buffer_.empty())
             {
+                busy_ = false;
                 transition_cv.wait_for(lock, 1ms);
                 if (transition_buffer_.empty() && stop_transition_thread_.wait_for(1ms) != std::future_status::timeout)
                 {
@@ -108,7 +111,7 @@ void TrafficLight::TransitionRunner()
                     return;
                 }
             }
-
+            busy_ = true;
             next_state = transition_buffer_.front();
             transition_buffer_.pop();
         }
@@ -188,6 +191,11 @@ void TrafficLight::AddStateToTransitionBuffer(TrafficLight::State state)
     std::lock_guard<std::mutex> lock(transition_mutex_);
     transition_buffer_.push(state);
     transition_cv.notify_all();
+}
+
+bool TrafficLight::InTransition()
+{
+    return busy_;
 }
 
 std::ostream& operator<<(std::ostream& out, TrafficLight::State state)

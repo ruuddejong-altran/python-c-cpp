@@ -39,7 +39,7 @@ The `Light` object can be in one of the following states:
 It has the following pubic methods:
 
 * `GetState()`, to get the state of the light.
-* `TransitToState()`, to set the state of the light.
+* `SetState()`, to set the state of the light.
 
 The header file `light.h` looks like:
 
@@ -62,7 +62,7 @@ public:
     static std::unique_ptr<Light> MakeLight();
 
 private:
-    State state_;
+    ...
 };
 
 std::ostream& operator<<(std::ostream& out, Light::State state);
@@ -145,23 +145,7 @@ protected:
     virtual void PrepareTransition(State from_state, State target_state);
 
 private:
-    using TransitionElement = std::tuple<State, LightPattern, int>;
-    using TransitionSequence = std::vector<TransitionElement>;
-
-    void Init(State initial_state);
-    void RunCallbackFunction(const CallbackFunction& func);
-    void RunTransition();
-    void SetLightPattern(LightPattern pattern);
-    void SetLightPatternAndWait(LightPattern pattern, int delay_ms);
-    void TransitToState(State target_state);
-
-    State current_state_;
-    std::vector<std::unique_ptr<Light>> lights_;
-    std::vector<CallbackFunction> state_change_cb_list_;
-    TransitionSequence transition_sequence_;
-    std::thread transition_thread_;
-    std::mutex lights_mutex_;
-    std::mutex transition_mutex_;
+    ...
 };
 
 std::ostream& operator<<(std::ostream& out, TrafficLight::State state);
@@ -171,9 +155,9 @@ This class is simple enough to understand,
 but has enough complexity to show some of the trickier
 parts of C++ and Python interworking.
 One of the not-so-trivial aspects is that the class
-spawns a new thread to execute state transitions,
-and in this way allows the calling program to call
-any of the utility methods.
+uses a separate thread to execute state transitions,
+and in this way allows the class to remain repsonsive
+to calls of any of the utility methods.
 
 ## Testing this in C++
 
@@ -261,8 +245,8 @@ class Light(pybind11_builtins.pybind11_object)
  |
  |      Get the light state
  |
- |  MoveTo(...)
- |      MoveTo(self: traffic.Light, state: Light::State) -> None
+ |  SetState(...)
+ |      SetState(self: traffic.Light, state: Light::State) -> None
  |
  |      Set the light state
  |
@@ -300,14 +284,18 @@ Invoked with: 0
 
 ```
 
-So we need to add at least two things:
+So we need to add at least two additional things:
 
 * Indicating the default argument for the constructor, and
 * Making the `Light::State` enum class available in Python.
 
 ### Default arguments
 
-Default arguments have to be specified explicitly in the
+`pybind11` cannot automatically handle default arguments.
+The reason for that is that `pybind11` does not analyze the header files,
+but instead looks at the function's (compiled) type information.
+And default arguments are not part of that type information.
+Default arguments have therefore to be specified explicitly in the
 wrapper class.
 
 <pre><code>
@@ -543,7 +531,7 @@ State.Closed
 >>>
 ```
 
-Querying the light pattern or the names of the light fails though:
+Querying the light pattern or the names of the lights fails though:
 
 ```text
 >>> t.pattern
@@ -619,9 +607,9 @@ And after building this, we see that it just works:
 State.Closed [State.On, State.Off, State.Off]
 ```
 
-We can also do something wicked, by triggering a transition
+Let's see if we can do something wicked, like triggering a transition
 to `Closed` as soon as the traffic light reaches the `Open` state.
-You probably have encountered this type of traffic light :smiley:
+You probably have encountered this type of traffic light.
 
 ```text
 >>> def force_closed(tl):
@@ -631,62 +619,7 @@ You probably have encountered this type of traffic light :smiley:
 >>> t.AddCallback(force_closed)
 >>> t.state
 State.Closed
-t.MoveTo(t.State.Open)
->>> State.Open [State.Off, State.Off, State.On]
-
-$ 
-```
-
-OK. That did not work. The application crashed hard.
-The Visual Studio runtime does not give any helpful information,
-but running this example on Linux gives more info:
-
-```text
-terminate called after throwing an instance of 'pybind11::error_already_set'
-  what():  RuntimeError: Resource deadlock avoided
-
-At:
-  <stdin>(3): force_closed
-
-Aborted (core dumped)
-```
-
-Looking back, we can see that we try to trigger a state transition
-while another transition was already in progress.
-We've found a bug in the original TrafficLight implementation.
-So the question now is: how should we handle a state transition
-request that arrives while another transition is still in progress?
-The current behaviour (crash the application) is obviously not
-acceptable.
-Silently ignoring the request would be a possible solution,
-but this would lead to hard-to-find problems in an application that
-controls multiple traffic lights.
-The only feasible solution from a business point of view
-would be to buffer the requests.
-
-I rewrote the TrafficLight class, so that the state change
-requests are buffered.
-With this change, a TrafficLight instance has a long-running thread
-that waits until a transition request arrives,
-or the TrafficLight instance is destroyed.
-The `force_closed` callback now works as expected:
-
-```text
->>> import traffic
->>> t = traffic.TrafficLight()
->>> def monitor(tl):
-...     print(f"{tl.state} ({', '.join(f'{name}: {state.name}' for name, state in zip(tl.names, tl.pattern))})")
-...
->>> def force_closed(tl):
-...     if tl.state == tl.State.Open:
-...         tl.MoveTo(tl.State.Closed)
-...
->>> t.AddCallback(monitor)
->>> t.AddCallback(force_closed)
->>> t.MoveTo(t.State.Closed)
-State.Closing (red: Off, amber: On, green: Off)
->>> State.Closed (red: On, amber: Off, green: Off)
-t.MoveTo(t.State.Open)
+>>> t.MoveTo(t.State.Open)
 >>> State.Open (red: Off, amber: Off, green: On)
 State.Closing (red: Off, amber: On, green: Off)
 State.Closed (red: On, amber: Off, green: Off)

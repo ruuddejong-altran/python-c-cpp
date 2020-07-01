@@ -41,5 +41,7 @@ PYBIND11_MODULE(traffic, m)
             .def_property_readonly("state", &TrafficLight::GetState, "The state of the traffic light")
             .def_property_readonly("pattern", &TrafficLight::GetLightPattern, "The light pattern of the traffic light")
             .def_property_readonly("names", &TrafficLight::GetLightNames, "The names of the lights")
-            .def("AddCallback", &TrafficLight::AddCallback, "Add a callback method");
+            .def("AddCallback", &TrafficLight::AddCallback, "Add a callback method")
+            .def_property_readonly("in_transition", &TrafficLight::InTransition,
+                                   "Is the traffic light performing a transition");
 }

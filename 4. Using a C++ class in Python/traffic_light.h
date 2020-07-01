@@ -31,6 +31,7 @@ public:
     virtual LightPattern GetLightPattern();
     virtual void MoveTo(State target_state);
     virtual void AddCallback(const CallbackFunction& func);
+    virtual bool InTransition();
 
 protected:
     virtual void PrepareTransition(State from_state, State target_state);
@@ -59,6 +60,7 @@ private:
     std::condition_variable transition_cv;
     std::promise<void> stop_signal_;
     std::future<void> stop_transition_thread_;
+    bool busy_;
 
 };
 
