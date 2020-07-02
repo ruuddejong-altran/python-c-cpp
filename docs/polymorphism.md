@@ -234,6 +234,11 @@ be used for pure virtual functions,
 and corresponding `PYBIND11_OVERLOAD[_PURE]_NAME` macros that must
 be used when the Python method's name is different from the
 C++ name.
+According to the `pybind11` documentation, the trailing comma
+in the macro arguments is required to ensure portable code
+when the overriden method does not take any arguments.
+If the method would take arguments, the argument types would follow
+the method name; in that case there should be no trailing comma.
 
 The final step is to make the binding code aware of the the
 trampoline helper class.
@@ -284,6 +289,6 @@ Since the virtual methods are private,
 the binding code cannot reference them,
 and hence there can be no trampoline method for then.
 In this case polymorphism for
-Python-defined subclasses is simply impossible,
+Python-defined subclasses is impossible,
 or at least requires coding tricks that are way beyond
 the scope of this text.
